@@ -19,6 +19,10 @@ class Board
     puts "    #{data[7]}    |    #{data[8]}    |    #{data[9]}"
     puts '         |         |'
   end
+  
+  def player_positions(marker)
+    data.select { |_, square| square.value == marker }.keys
+  end
  
   def empty_squares
     data.select { |_, square| square.value == ' ' }.keys
@@ -26,11 +30,8 @@ class Board
  
   def all_squares_occupied?
     if empty_squares.size == 0
-      system 'clear'
-      self.draw
-      puts 'Draw!'
       return true
-      end
+    end
     false
   end
 end
@@ -41,6 +42,17 @@ class Player
   def initialize(name, marker)
     @name = name
     @marker = marker
+  end
+   
+  def player_marks_square(player, board)
+    if player.name == 'Comp'
+      board.data[board.empty_squares.sample].value = player.marker
+    else
+      begin
+        choice = gets.chomp.to_i
+      end until board.empty_squares.include?(choice)
+      board.data[choice].value = player.marker
+    end
   end
 end
 
@@ -72,44 +84,45 @@ class Game
     @human = Player.new(name, 'X')
   end
  
-  def human_marks_square
-    begin
-      choice = gets.chomp.to_i
-    end until board.empty_squares.include?(choice)
-    board.data[choice].value = human.marker
-  end
- 
-  def computer_marks_square
-    board.data[board.empty_squares.sample].value = computer.marker
-  end
- 
-  def player_positions(player)
-    board.data.select { |_, square| square.value == player.marker }.keys
-  end
- 
   def player_wins?(player)
     WINNING_LINES.each do |line|
-      if (line & player_positions(player)).length == 3
-        system 'clear'
-        board.draw
-        puts "#{player.name} wins!"
+      if (line & board.player_positions(player.marker)).length == 3
         return true
       end
     end
     false
   end
  
+  def update_screen
+    system 'clear'
+    board.draw
+  end
+  
+  def game_end_message(player)
+    update_screen
+    puts "#{player.name} wins!"
+  end
+ 
   def gameplay
+    system 'clear'
     choose_name
     loop do
-      system 'clear'
-      board.draw
+      update_screen
       puts "\nPlease choose a position from 1 to 9 (order runs left to right, top to bottom)."
-      human_marks_square
-      break if player_wins?(human)
-      break if board.all_squares_occupied?
-      computer_marks_square
-      break if player_wins?(computer)
+      human.player_marks_square(human, board)
+      if player_wins?(human)
+        game_end_message(human)
+        break
+      elsif board.all_squares_occupied?
+        update_screen
+        puts 'Draw!'
+        break
+      end
+      computer.player_marks_square(computer, board)
+      if player_wins?(computer)
+        game_end_message(computer)
+        break
+      end
     end
   end
 end
