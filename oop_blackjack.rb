@@ -27,8 +27,8 @@ class Participant
   attr_accessor :hand, :score, :ace_counter
  
   def initialize
-    @hand = {'A?' => 11}
-    @ace_counter = 2
+    @hand = {}
+    @ace_counter = 0
   end
 
   def score
