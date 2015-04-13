@@ -27,8 +27,8 @@ class Participant
   attr_accessor :hand, :score, :ace_counter
  
   def initialize
-    @hand = {}
-    @ace_counter = 0
+    @hand = {'A?' => 11}
+    @ace_counter = 2
   end
 
   def score
@@ -185,7 +185,7 @@ class Game
     player.choose_name
     dealer.initial_deal(cards.deck, player)
     player.hit_or_stay(cards.deck, dealer, self)
-    dealer.final_deal(cards.deck, self) if !player.bust? && !player.blackjack?
+    dealer.final_deal(cards.deck, self) if !player.bust?
     sleep(0.7)
     end_message
   end
