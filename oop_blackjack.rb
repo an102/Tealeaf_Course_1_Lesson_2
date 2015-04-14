@@ -24,26 +24,27 @@ class Cards
 end
 
 class Participant
-  attr_accessor :hand, :score, :ace_counter
+  attr_accessor :hand, :score, :cards_to_display
  
   def initialize
     @hand = {}
-    @ace_counter = 0
+    @cards_to_display = []
   end
 
   def score
     pretotal = 0
-    total = 0
-    
     hand.values.each { |value| pretotal += value}
-    if (ace_counter > 1) || (ace_counter == 1 && pretotal > 21)
-      hand.keys.each { |card_type| hand[card_type] = 1 if card_type[0] == 'A' }
-      hand.values.each { |value| total += value}
-      self.score = total
-    else
-       hand.values.each { |value| total += value}
-      self.score = total
-    end
+    begin
+      hand.keys.each do |card_type|
+        if card_type[0] == 'A' && hand[card_type] == 11 && pretotal > 21
+          hand[card_type] = 1
+          pretotal = 0
+          hand.values.each { |value| pretotal += value}
+          break
+        end
+      end
+    end while pretotal > 21 && hand.values.include?(11)
+    score = pretotal
   end
  
   def bust?
@@ -70,7 +71,7 @@ class Player < Participant
   def non_blackjack_21?
     score == 21 && hand.keys.size > 2
   end
-  
+ 
   def hit_or_stay(cards, dealer, game)
     loop do
       game.display
@@ -103,20 +104,17 @@ class Dealer < Participant
     end until score >= 17
     game.display
   end
-  
+ 
   def deal(cards, participant)
     dealt_card = cards.keys.sample
     participant.hand[dealt_card] = cards.values_at(dealt_card)[0]
     cards.delete(dealt_card)
-    participant.ace_counter += 1 if dealt_card[0] == 'A'
   end
 end
 
 class Game
+  attr_accessor :dealer_score_cycle_check, :player_score_cycle_check
   attr_reader :player, :dealer, :cards
-  
-  @@dealer_cards_to_display = []
-  @@player_cards_to_display = []
 
   def initialize
     @player = Player.new
@@ -124,52 +122,50 @@ class Game
     @cards = Cards.new
   end
  
+  def data_to_display(participant)
+    case participant
+    when dealer then print "Dealer: "
+    when player then print "#{player.name}: "
+    end
+      card_type = participant.hand.keys[participant.cards_to_display.size]
+      participant.cards_to_display.each { |card| print "#{card} " }
+      puts ''
+      if participant.cards_to_display.size == participant.hand.keys.size
+        puts "Score: #{participant.score}"
+        case participant
+        when dealer then self.dealer_score_cycle_check = 1
+        when player then self.player_score_cycle_check = 1
+        end
+      else
+        temp_score = 0
+        participant.cards_to_display.each { |card| temp_score += participant.hand.values_at(card)[0] }
+        participant.cards_to_display.push(card_type)
+        puts "Score: #{temp_score}"
+      end
+  end
+  
   def display
-    dealer_score_cycle_check = 0
-    player_score_cycle_check = 0
-    
+    @dealer_score_cycle_check = 0
+    @player_score_cycle_check = 0
+
     loop do
       system 'clear'
-      print "Dealer: "
-      dealer_card_type = dealer.hand.keys[@@dealer_cards_to_display.size]
-      @@dealer_cards_to_display.each { |card| print "#{card} " }
-      puts ''
-      if @@dealer_cards_to_display.size == dealer.hand.keys.size
-        puts "Score: #{dealer.score}"
-        dealer_score_cycle_check = 1
-      else
-        temp_score = 0
-        @@dealer_cards_to_display.each { |card| temp_score += dealer.hand.values_at(card)[0] }
-        @@dealer_cards_to_display.push(dealer_card_type)
-        puts "Score: #{temp_score}"
-      end
-      print "\n#{player.name}: "
-      player_card_type = player.hand.keys[@@player_cards_to_display.size]
-      @@player_cards_to_display.each { |card| print "#{card} " }
-      puts ''
-      if @@player_cards_to_display.size == player.hand.keys.size
-        puts "Score: #{player.score}\n "
-        player_score_cycle_check = 1
-      else
-        temp_score = 0
-        @@player_cards_to_display.each { |card| temp_score += player.hand.values_at(card)[0] }
-        @@player_cards_to_display.push(player_card_type)
-        puts "Score: #{temp_score}"
-      end
+      data_to_display(dealer)
+      data_to_display(player)
       break if (dealer_score_cycle_check + player_score_cycle_check) == 2
       sleep(0.7)
     end
   end
-  
+ 
   def end_message
     if player.bust?
       puts "#{player.name} is bust!\n\nDealer wins!"
-    elsif dealer.bust?
-      puts "Dealer bust!\n\n#{player.name} wins!"
     elsif player.blackjack? && dealer.blackjack?
       puts "Double blackjack!\n\nPush!"
     elsif player.blackjack?
       puts "Blackjack!\n\n#{player.name} wins!"
+    elsif dealer.bust?
+      puts "Dealer bust!\n\n#{player.name} wins!"
     elsif dealer.blackjack?
       puts "Dealer blackjack!\n\nDealer wins!"
     elsif dealer.score == player.score
@@ -180,7 +176,7 @@ class Game
       puts "#{player.name} wins!"
     end
   end
-  
+ 
   def gameplay
     player.choose_name
     dealer.initial_deal(cards.deck, player)
