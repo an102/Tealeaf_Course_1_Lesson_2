@@ -24,11 +24,10 @@ class Cards
 end
 
 class Participant
-  attr_accessor :hand, :score, :cards_to_display
+  attr_accessor :hand, :score
  
   def initialize
     @hand = {}
-    @cards_to_display = []
   end
 
   def score
