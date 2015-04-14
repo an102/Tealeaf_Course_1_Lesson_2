@@ -12,13 +12,13 @@ class Cards
     ['♠', '♥', '♦', '♣'].each do |symbol|
       (2..10).each do |value|
         card_type = value.to_s + symbol
-        self.deck[card_type] = value
+        deck[card_type] = value
       end
       ['J', 'Q', 'K'].each do |letter|
         card = letter + symbol
-        self.deck[card] = 10
+        deck[card] = 10
       end
-      self.deck['A' + symbol] = 11
+      deck['A' + symbol] = 11
     end
   end
 end
@@ -76,7 +76,7 @@ class Player < Participant
     loop do
       game.display
       break if bust? || blackjack? || non_blackjack_21? || dealer.blackjack?
-      sleep (0.7)
+      #sleep (0.7)
       puts "Hit or stay? (h/s)"
       begin
         choice = gets.chomp.downcase
@@ -92,17 +92,20 @@ end
 
 class Dealer < Participant
 
-  def initial_deal(cards, player)
+  def initial_deal(cards, player, game)
+    game.display
     deal(cards, player)
+    game.display
     deal(cards, self)
+    game.display
     deal(cards, player)
   end
  
   def final_deal(cards, game)
     begin
       deal(cards, self)
+      game.display
     end until score >= 17
-    game.display
   end
  
   def deal(cards, participant)
@@ -113,7 +116,6 @@ class Dealer < Participant
 end
 
 class Game
-  attr_accessor :dealer_score_cycle_check, :player_score_cycle_check
   attr_reader :player, :dealer, :cards
 
   def initialize
@@ -125,36 +127,19 @@ class Game
   def data_to_display(participant)
     case participant
     when dealer then print "Dealer: "
-    when player then print "#{player.name}: "
+    when player then print "\n#{player.name}: "
     end
-      card_type = participant.hand.keys[participant.cards_to_display.size]
-      participant.cards_to_display.each { |card| print "#{card} " }
-      puts ''
-      if participant.cards_to_display.size == participant.hand.keys.size
-        puts "Score: #{participant.score}"
-        case participant
-        when dealer then self.dealer_score_cycle_check = 1
-        when player then self.player_score_cycle_check = 1
-        end
-      else
-        temp_score = 0
-        participant.cards_to_display.each { |card| temp_score += participant.hand.values_at(card)[0] }
-        participant.cards_to_display.push(card_type)
-        puts "Score: #{temp_score}"
-      end
+    participant.hand.keys.each { |card| print "#{card} " }
+    puts ''
+    puts "Score: #{participant.score}"
   end
   
   def display
-    @dealer_score_cycle_check = 0
-    @player_score_cycle_check = 0
-
-    loop do
       system 'clear'
       data_to_display(dealer)
       data_to_display(player)
-      break if (dealer_score_cycle_check + player_score_cycle_check) == 2
+      puts ''
       sleep(0.7)
-    end
   end
  
   def end_message
@@ -179,10 +164,9 @@ class Game
  
   def gameplay
     player.choose_name
-    dealer.initial_deal(cards.deck, player)
+    dealer.initial_deal(cards.deck, player, self)
     player.hit_or_stay(cards.deck, dealer, self)
     dealer.final_deal(cards.deck, self) if !player.bust?
-    sleep(0.7)
     end_message
   end
 end
